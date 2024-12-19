@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { notFound, errorHandler } from "./middleware/Error-Middleware.js";
 import cookieParser from "cookie-parser";
-import router from "./routes/Auth-router.js";
+import router from "./routes/Auth-Router.js";
 
 dotenv.config();
 
@@ -26,8 +26,7 @@ app.use(errorHandler);
 // Database Connection
 mongoose
     .connect(databaseUri, { 
-        useNewUrlParser: true, 
-        useUnifiedTopology: true 
+        
     })
     .then(() => console.log("Connected to the database"))
     .catch(err => console.error("Failed to connect to the database:", err));
