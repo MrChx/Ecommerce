@@ -17,7 +17,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use(router); 
+app.use('/api', router);
 
 // Error Handling Middleware
 app.use(notFound);

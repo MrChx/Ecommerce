@@ -1,6 +1,7 @@
 import user from "../model/User-Model.js";
 import jwt from "jsonwebtoken";
 import asyncHandler from "../middleware/asyncHandler.js";
+import User from "../model/User-Model.js";
 
 const signToken = id => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "6d" });
@@ -59,7 +60,7 @@ export const loginUser = asyncHandler(async(req, res) => {
         throw new Error("Email atau password tidak boleh kosong")
     }
 
-    const userData = await user.findOne({
+    const userData = await User.findOne({
         email: req.body.email
     })
 
@@ -69,4 +70,32 @@ export const loginUser = asyncHandler(async(req, res) => {
         res.status(401)
         throw new Error("Email atau password salah")
     }
-})
+});
+
+export const getUser = asyncHandler(async(req, res) => {
+    const user = await User.findById(req.user._id).select("-password")  // Gunakan User (model) bukan user
+
+    if (user) {
+        return res.status(200).json({
+            user
+        })
+    } else {
+        res.status(404);
+        throw new Error("User tidak ditemukan")
+    }
+});
+
+export const logoutUser = async (req, res) => {
+    res.cookie('jwt', "", {
+        httpOnly: true,
+        expires: new Date(Date.now()),
+        secure: process.env.NODE_ENV !== 'development', // Gunakan HTTPS di production
+        sameSite: 'strict',
+        path: '/'
+    })
+
+    res.status(200).json({
+        status: "success",
+        message: "Logout berhasil"
+    });
+};
