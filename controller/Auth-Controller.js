@@ -73,7 +73,7 @@ export const loginUser = asyncHandler(async(req, res) => {
 });
 
 export const getUser = asyncHandler(async(req, res) => {
-    const user = await User.findById(req.user._id).select("-password")  // Gunakan User (model) bukan user
+    const user = await User.findById(req.user._id).select("-password") 
 
     if (user) {
         return res.status(200).json({
@@ -89,7 +89,7 @@ export const logoutUser = async (req, res) => {
     res.cookie('jwt', "", {
         httpOnly: true,
         expires: new Date(Date.now()),
-        secure: process.env.NODE_ENV !== 'development', // Gunakan HTTPS di production
+        secure: process.env.NODE_ENV !== 'development', 
         sameSite: 'strict',
         path: '/'
     })
@@ -99,3 +99,35 @@ export const logoutUser = async (req, res) => {
         message: "Logout berhasil"
     });
 };
+
+export const updateUser = asyncHandler(async (req, res, next) => {
+    const { name, email, password } = req.body;
+
+    if (!name && !email && !password) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'Please provide at least one field to update'
+        });
+    }
+
+    // Find user by ID and update
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        { name, email, password },
+        { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+        return res.status(404).json({
+            status: 'fail',
+            message: 'User not found'
+        });
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            user
+        }
+    });
+});
