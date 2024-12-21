@@ -26,7 +26,7 @@ const productSchema = new Schema({
         enum: ["sepatu", "kemeja", "baju", "celana"]
     },
     stock: {
-        type: String,
+        type: Number,
         default: 0
     },
 }, {
