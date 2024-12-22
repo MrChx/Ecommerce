@@ -1,4 +1,3 @@
-// Product-Controller.js
 import Product from "../model/Product-Model.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import mongoose from "mongoose";
@@ -102,5 +101,26 @@ export const deleteProduct = asyncHandler(async (req, res) => {
         code: 200,
         status: "success",
         message: "Berhasil menghapus produk"
+    });
+});
+
+export const Fileupload = asyncHandler(async(req, res) => {
+    if (!req.file) {
+        res.status(400);
+        throw new Error("Tidak ada file yang diupload");
+    }
+
+    const imageFileName = req.file.filename;
+    const pathImageFile = `/uploads/${imageFileName}`;
+
+    res.status(200).json({
+        code: 200,
+        status: "success",
+        message: "Foto berhasil diupload",
+        data: {
+            fileName: imageFileName,
+            path: pathImageFile,
+            mimeType: req.file.mimetype
+        }
     });
 });
