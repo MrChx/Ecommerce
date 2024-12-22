@@ -106,7 +106,7 @@ export const updateUser = asyncHandler(async (req, res, next) => {
     if (!name && !email && !password) {
         return res.status(400).json({
             status: 'fail',
-            message: 'Please provide at least one field to update'
+            message: 'Harap isi format update dengan sesuai'
         });
     }
 
@@ -120,7 +120,7 @@ export const updateUser = asyncHandler(async (req, res, next) => {
     if (!user) {
         return res.status(404).json({
             status: 'fail',
-            message: 'User not found'
+            message: 'User tidak ditemukan'
         });
     }
 

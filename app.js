@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { notFound, errorHandler } from "./middleware/Error-Middleware.js";
 import cookieParser from "cookie-parser";
-import router from "./routes/Auth-Router.js";
+import router from "./routes/route.js";
 
 dotenv.config();
 
