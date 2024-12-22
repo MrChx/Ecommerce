@@ -6,8 +6,11 @@ export const createProduct = asyncHandler(async (req, res) => {
     const { name, price } = req.body;
 
     if (!name || !price) {
-        res.status(400);
-        throw new Error("Nama dan harga produk harus disediakan");
+        return res.status(400).json({
+            code: 400,
+            status: "error",
+            message: "Nama dan harga produk harus disediakan"
+        });
     }
 
     const newProduct = await Product.create(req.body);
@@ -21,6 +24,15 @@ export const createProduct = asyncHandler(async (req, res) => {
 
 export const allProduct = asyncHandler(async (req, res) => {
     const data = await Product.find();
+    
+    if (data.length === 0) {
+        return res.status(404).json({
+            code: 404,
+            status: "error",
+            message: "Data masih kosong"
+        });
+    }
+
     return res.status(200).json({
         code: 200,
         status: "success",
@@ -33,8 +45,11 @@ export const getProductById = asyncHandler(async (req, res) => {
     const paramsId = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(paramsId)) {
-        res.status(400);
-        throw new Error("ID produk tidak valid");
+        return res.status(400).json({
+            code: 400,
+            status: "error",
+            message: "ID produk tidak valid"
+        });
     }
 
     const productData = await Product.findById(paramsId);
@@ -60,6 +75,13 @@ export const updateProduct = asyncHandler(async(req, res) => {
         throw new Error("ID produk tidak valid");
     }
 
+    const { name, price } = req.body;
+
+    if (!name || !price) {
+        res.status(400);
+        throw new Error("Nama dan harga produk harus disediakan");
+    }
+
     const dataUpdate = await Product.findByIdAndUpdate(
         paramsId,
         req.body,
@@ -70,8 +92,11 @@ export const updateProduct = asyncHandler(async(req, res) => {
     );
 
     if (!dataUpdate) {
-        res.status(404);
-        throw new Error("Produk tidak ditemukan");
+        return res.status(404).json({
+            code: 404,
+            status: "error",
+            message: "Produk tidak ditemukan"
+        });
     }
 
     return res.status(200).json({
