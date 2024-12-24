@@ -22,25 +22,28 @@ export const createProduct = asyncHandler(async (req, res) => {
     });
 });
 
- export const getAllProduct = asyncHandler(async (req, res) => {
+export const getAllProduct = asyncHandler(async (req, res) => {
     try {
-        // 1. Filter query parameters
-        const queryObj = {...req.query};
-        const excludeField = ["page", "limit"];
-        excludeField.forEach(field => delete queryObj[field]);
+        const { page = 1, limit = 10, name, ...otherQueries } = req.query;
 
-        // 2. Setup pagination
-        const page = parseInt(req.query.page) || 1;
-        const limitData = parseInt(req.query.limit) || 10;
-        const skipData = (page - 1) * limitData;
+        // Build query
+        const queryObj = { ...otherQueries };
+        if (name) {
+            queryObj.name = { $regex: name, $options: 'i' };
+        }
 
-        // 3. Execute query with pagination
+        // Setup pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Execute queries
         const totalProducts = await Product.countDocuments(queryObj);
-        const query = Product.find(queryObj).skip(skipData).limit(limitData);
-        const data = await query;
+        const products = await Product.find(queryObj)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
 
-        // 4. Check if page exists
-        if (skipData >= totalProducts && page !== 1) {
+        // Validation checks
+        if (skip >= totalProducts && parseInt(page) !== 1) {
             return res.status(400).json({
                 code: 400,
                 status: "error",
@@ -48,27 +51,25 @@ export const createProduct = asyncHandler(async (req, res) => {
             });
         }
 
-        // 5. Check if data exists
-        if (data.length === 0) {
+        if (products.length === 0) {
             return res.status(404).json({
                 code: 404,
                 status: "error",
-                message: "Data masih kosong"
+                message: name ? "Produk tidak ditemukan" : "Data masih kosong"
             });
         }
 
-        // 6. Success response
         return res.status(200).json({
             code: 200,
             status: "success",
             message: "Berhasil mendapatkan data produk",
             meta: {
-                page,
-                limit: limitData,
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: totalProducts,
-                totalPages: Math.ceil(totalProducts / limitData)
+                totalPages: Math.ceil(totalProducts / parseInt(limit))
             },
-            data
+            data: products
         });
     } catch (error) {
         return res.status(500).json({
