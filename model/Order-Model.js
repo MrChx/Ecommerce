@@ -32,11 +32,11 @@ const orderSchema = new Schema({
         type: String,
         required: [true, "Harus mengidi nama depan"]
     },
-    LastName: {
+    lastName: {
         type: String,
         required: [true, "Harus mengisi nama belakang"]
     },
-    Phone: {
+    phone: {
         type: String,
         required: [true, "Harus mengisi nomor telepon"]
     },
