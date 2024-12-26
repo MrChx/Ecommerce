@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import { notFound, errorHandler } from "./middleware/Error-Middleware.js";
 import cookieParser from "cookie-parser";
 import router from "./routes/route.js";
+import ExpressMongoSanitize from "express-mongo-sanitize";
+import helmet from "helmet";
 
 dotenv.config();
 
@@ -13,6 +15,8 @@ const databaseUri = process.env.DATABASE;
 
 // Middleware
 app.use(express.json());
+app.use(ExpressMongoSanitize());
+app.use(helmet());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
