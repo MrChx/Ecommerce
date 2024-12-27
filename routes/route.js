@@ -3,7 +3,7 @@ import express from 'express';
 import { getUser, loginUser, logoutUser, registerUser, updateUser } from '../controller/Auth-Controller.js';
 import { adminMiddleware, protectedMiddleware } from '../middleware/authMiddleware.js';
 import { createProduct, deleteProduct, Fileupload, getAllProduct, getProductById, updateProduct } from '../controller/Product-Controller.js';
-import { AllOrder, createOrder, currentUserOrder, detailOrder } from '../controller/Order-Controller.js';
+import { AllOrder, createOrder, currentUserOrder, detailOrder, notifPayment } from '../controller/Order-Controller.js';
 import { uploadImage } from '../utils/uploadFileHandler.js';
 
 const router = express.Router();
@@ -25,5 +25,6 @@ router.route('/create/order').post(protectedMiddleware, createOrder);
 router.route('/get/order').get(protectedMiddleware, AllOrder);
 router.route('/get/order/:id').get(protectedMiddleware, detailOrder);
 router.route('/order/user').get(protectedMiddleware, currentUserOrder);
+router.route('/order/notif').post(notifPayment);
 
 export default router;

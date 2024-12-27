@@ -2,6 +2,48 @@ import asyncHandler from "../middleware/asyncHandler.js";
 import Product from "../model/Product-Model.js";
 import Order from "../model/Order-Model.js";
 import logger from "../utils/logger.js";
+import midtransClient from "midtrans-client";
+import dotenv from "dotenv";
+dotenv.config();
+
+// Validasi server key
+if (!process.env.MIDTRANS_SERVER_KEY) {
+    throw new Error('MIDTRANS_SERVER_KEY is not set in environment variables');
+}
+
+// Inisialisasi Snap dengan error handling
+let snap;
+try {
+    snap = new midtransClient.Snap({
+        isProduction: true,
+        serverKey: process.env.MIDTRANS_SERVER_KEY,
+        clientKey: process.env.MIDTRANS_CLIENT_KEY
+    });
+} catch (error) {
+    console.error('Error initializing Midtrans:', error);
+    throw error;
+}
+
+// Fungsi untuk memvalidasi konfigurasi
+const validateMidtransConfig = async () => {
+    try {
+        // Test configuration dengan transaksi minimal
+        const testParam = {
+            transaction_details: {
+                order_id: `test-${Date.now()}`,
+                gross_amount: 10000
+            }
+        };
+        await snap.createTransaction(testParam);
+        console.log('Midtrans configuration is valid');
+        return true;
+    } catch (error) {
+        console.error('Midtrans configuration error:', error);
+        return false;
+    }
+};
+
+export { snap, validateMidtransConfig };
 
 export const createOrder = asyncHandler(async(req, res) => {
     logger.info("Incoming request body:", req.body);
@@ -14,7 +56,6 @@ export const createOrder = asyncHandler(async(req, res) => {
     if (!lastName) errors.push("Harus mengisi nama belakang");
     if (!phone) errors.push("Harus mengisi nomor telepon");
     
-    // Validasi cartItems
     if (!cartItems || !Array.isArray(cartItems)) {
         errors.push("Format keranjang belanja tidak valid");
     } else if (cartItems.length === 0) {
@@ -27,6 +68,7 @@ export const createOrder = asyncHandler(async(req, res) => {
     }
 
     let orderItems = [];
+    let orderMidtrans = [];
     let total = 0;
 
     for (const item of cartItems) {
@@ -46,10 +88,18 @@ export const createOrder = asyncHandler(async(req, res) => {
             quantity: item.quantity,
             name: product.name,
             price: product.price,
-            productId: product._id
+            product: product._id
+        };
+
+        const orderItemMidtrans = {
+            id: product._id.toString(),
+            name: product.name.substring(0, 50), // Midtrans has character limit
+            price: product.price,
+            quantity: item.quantity
         };
 
         orderItems.push(orderItem);
+        orderMidtrans.push(orderItemMidtrans);
         total += item.quantity * product.price;
     }
 
@@ -60,14 +110,35 @@ export const createOrder = asyncHandler(async(req, res) => {
         lastName,
         email,
         phone,
-        user: req.user.id
+        user: req.user._id,
+        status: 'pending'
     });
+
+    let parameter = {
+        transaction_details: {
+            order_id: order._id.toString(),
+            gross_amount: total
+        },
+        credit_card: {
+            secure: true
+        },
+        item_details: orderMidtrans,
+        customer_details: {
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            phone: phone
+        }
+    };
+
+    const token = await snap.createTransaction(parameter);
     
     return res.status(201).json({
         code: 201,
         status: "success",
         data: order,
-        message: "Order berhasil dibuat"
+        message: "Order berhasil dibuat",
+        token: token.token
     });
 });
 
@@ -153,4 +224,58 @@ export const currentUserOrder = asyncHandler(async (req, res) => {
         data: orders,
         message: "Berhasil menampilkan order user",
     });
+});
+
+export const notifPayment = asyncHandler(async (req, res) => {
+    try {
+        const notification = await snap.transaction.notification(req.body);
+        const orderId = notification.order_id;
+        const transactionStatus = notification.transaction_status;
+        const fraudStatus = notification.fraud_status;
+
+        logger.info(`Pemberitahuan pembayaran diterima. Order ID: ${orderId}, Transaksi status: ${transactionStatus}, Status: ${fraudStatus}`);
+
+        const orderData = await Order.findById(orderId);
+
+        if (!orderData) {
+            return res.status(404).json({
+                code: 404,
+                status: "error",
+                message: "Order dengan ID " + orderId + " tidak ditemukan",
+            });
+        }
+
+        if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
+            if (fraudStatus === 'accept') {
+                // Update stock for each product
+                for (const item of orderData.itemsDetail) {
+                    const product = await Product.findById(item.product);
+                    if (product) {
+                        product.stock -= item.quantity;
+                        await product.save();
+                    }
+                }
+                orderData.status = "success";
+            }
+        } else if (['cancel', 'deny', 'expire'].includes(transactionStatus)) {
+            orderData.status = "failed";
+        } else if (transactionStatus === 'pending') {
+            orderData.status = "pending";
+        }
+
+        await orderData.save();
+        
+        return res.status(200).json({
+            code: 200,
+            status: "success",
+            message: "Proses notifikasi pembayaran berhasil",
+        });
+    } catch (error) {
+        logger.error("Prosses pembayaran error:", error);
+        return res.status(500).json({
+            code: 500,
+            status: "error",
+            message: "Notifikasi pembayaran gagal"
+        });
+    }
 });
